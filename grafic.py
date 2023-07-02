@@ -4,7 +4,7 @@ import numpy as np
 import json
 
 # Read data from json file
-with open('semana.json') as f:
+with open('IDS/semana.json') as f:
     data = json.load(f)
 
 # Convert data to pandas DataFrame
@@ -42,11 +42,22 @@ erro_MAPE = round(erro_MAPE, 2)
 # calcular EMA numa janela de 10 minutos
 df['EMA'] = df['total_len'].ewm(span=10, adjust=False).mean()
 
+#marcar com um ponto vermelho pacotes com tamanho maior que 2 * EMA (anomalia)
+df['anomaly'] = df['total_len'] > 2 * df['EMA']
+
+
+
 # Plot data
 
 fig, ax = plt.subplots(figsize=(12, 6))
 ax.plot(df['time'], df['total_len'], label='Comprimento total')
 ax.plot(df['time'], df['EMA'], label='EMA')
+
+#marcar com um ponto vermelho pacotes com tamanho maior que 2 * EMA (anomalia)
+ax.plot(df.loc[df['anomaly'], 'time'], df.loc[df['anomaly'], 'total_len'], 'ro', label='Anomalia')
+
+#numero de anomalias
+ax.text(0.5, 0.85, 'Anomalias = ' + str(df['anomaly'].sum()), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
 
 #descrição do erro no cantor superior direito
 ax.text(0.5, 0.95, 'NMSE = ' + str(erro_NMSE) + '\nMAPE = ' + str(erro_MAPE) + '%', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
