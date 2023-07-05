@@ -97,6 +97,29 @@ def plot_up():
     ax.legend()
     plt.show()  
 
+# plota controlando limite inferior e superior
+def plot_limites(margem,view_tolerance=True):
+    ax.clear()  # Limpar o gráfico antes de cada iteração
+    ax.plot(df['time'], df['total_len'], label='Comprimento total')
+    ax.plot(df['time'], df['EMA'], label='EMA')
+
+    #marcar com um ponto vermelho pacotes
+    ax.plot(df.loc[df['anomaly'], 'time'], df.loc[df['anomaly'], 'total_len'], 'ro', label='Anomalia')
+
+    #numero de anomalias
+    ax.text(0.5, 0.85, 'Anomalias = ' + str(df['anomaly'].sum()), horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+
+    # Plotar a Tolerancia
+    if view_tolerance:
+        # Calcular teto e piso da Tolerancia para a janela atual
+        teto =  df['total_len'] + (df['total_len'] * margem['superior'])
+        piso = df['total_len'] - (df['total_len'] * margem['inferior'])
+        ax.fill_between(df['time'], teto, piso, alpha=0.5, color='lightgreen', label='Tolerancia')
+
+    #descrição do erro no cantor superior direito
+    ax.text(0.5, 0.95, 'NMSE = ' + str(erro_NMSE) + '\nMAPE = ' + str(erro_MAPE) + '%', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+    ax.legend()
+    plt.show()  
 
 
 # do inicio ao fim dos dados
@@ -193,7 +216,27 @@ def start_all(time,margem,view_tolerance=True):
     plot_all(time,margem,view_tolerance)
 
 
-op = input('1 - Mostrar todos os dados\n2 - Mostrar por janela\n3- Mostrar dados somente maiores que o esperado.\n')
+def start_limites(margem,view_tolerance=True):
+
+    print(margem)
+
+    teto =  df['total_len'] + (df['total_len'] * margem['superior'])
+    piso = df['total_len'] - (df['total_len'] * margem['inferior'])
+
+    df['limite-superior'] = teto
+    df['limite-inferior'] = piso
+
+    #Classifica se é anomalia ou não baseado na Tolerancia
+    df['outside-superior'] = df['EMA'] >  teto
+    df['outside-inferior'] = df['EMA'] <  piso
+    df['anomaly'] = df['outside-superior'] | df['outside-inferior'] 
+
+    print(df)
+
+    plot_limites(margem,view_tolerance)
+
+
+op = input('1 - Mostrar todos os dados\n2 - Mostrar por janela\n3- Mostrar dados somente maiores que o esperado.\n4- Mostrar dados controlando limites superiores e inferiores\n')
 if op == '1':
     time = float(input('Taxa de atualização: '))
     margem = float(input('Tolerancia: ')) / 100
@@ -215,3 +258,13 @@ elif op == '2':
     start_window(time,margem,zoom,view_tolerance)
 elif op == '3':
     plot_up()
+elif op == '4':
+    limite_superior = float(input('Limite superior: ')) / 100
+    limite_inferior = float(input('Limite inferior: ')) / 100
+    
+    view_tolerance = input('Mostrar Tolerancia? (S/N): ')
+    view_tolerance = view_tolerance.lower()
+    view_tolerance = True if view_tolerance == 's' else False
+
+    margem = {'superior': limite_superior, 'inferior': limite_inferior}
+    start_limites(margem,view_tolerance)
